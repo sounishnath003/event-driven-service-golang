@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/segmentio/kafka-go"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Post struct {
@@ -20,8 +21,8 @@ type Post struct {
 	UpdatedAt time.Time `json:"UpdatedAt"`
 }
 
-// CreatePostHandler handles the create posts requests publishes to kafka brokers
-func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
+// CreatePostHandlerWithKafka handles the create posts requests publishes without kafka
+func CreatePostHandlerWithoutKafka(w http.ResponseWriter, r *http.Request) {
 	var createPostPayload Post
 	err := json.NewDecoder(r.Body).Decode(&createPostPayload)
 
@@ -31,9 +32,53 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// // add additional fields from backend
-	// createPostPayload.ID = time.Now().UnixMilli()
-	// createPostPayload.CreatedAt = time.Now()
-	// createPostPayload.UpdatedAt = time.Now()
+	createPostPayload.ID = time.Now().UnixMilli()
+	createPostPayload.CreatedAt = time.Now()
+	createPostPayload.UpdatedAt = time.Now()
+
+	// Create a Database entry of the post.
+	mongoClient, err := GetMongoClientFromContext(r.Context())
+	if err != nil {
+		ApiJsonResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	// Save post to database
+	err = savePostToDatabase(mongoClient, createPostPayload)
+	if err != nil {
+		ApiJsonResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	ApiJsonResponse(w, http.StatusOK, map[string]any{
+		"post":    createPostPayload,
+		"message": "post created",
+	})
+}
+
+// savePostToDatabase saves the post to the MongoDB database
+func savePostToDatabase(mongoClient *mongo.Client, createPostPayload Post) error {
+	collection := mongoClient.Database("posts-without-kafka").Collection("posts")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err := collection.InsertOne(ctx, createPostPayload)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CreatePostHandlerWithKafka handles the create posts requests publishes without kafka
+func CreatePostHandlerWithKafka(w http.ResponseWriter, r *http.Request) {
+	var createPostPayload Post
+	err := json.NewDecoder(r.Body).Decode(&createPostPayload)
+
+	if err != nil {
+		ApiJsonResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
 
 	// postBytes
 	postBytes, err := json.Marshal(createPostPayload)
@@ -61,7 +106,7 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ApiJsonResponse(w, http.StatusOK, map[string]string{
-		"message": "post created",
+		"message":   "post created",
 	})
 }
 
@@ -81,4 +126,13 @@ func GetKafkaWriterFromContext(ctx context.Context) (*kafka.Writer, error) {
 		return nil, errors.New("kafka writer instance is not initialized in posts producers")
 	}
 	return writer, nil
+}
+
+// GetMongoClientFromContext retrieves the Kafka writer from the request context
+func GetMongoClientFromContext(ctx context.Context) (*mongo.Client, error) {
+	mongoClient, ok := ctx.Value("mongoClient").(*mongo.Client)
+	if !ok {
+		return nil, errors.New("mongo db client instance is not initialized in posts producers")
+	}
+	return mongoClient, nil
 }

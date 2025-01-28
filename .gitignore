@@ -1,0 +1,9 @@
+node_modules
+bin
+.env
+.env-lock
+.prod-env
+tmp
+temp
+.sounish
+.DS_Store

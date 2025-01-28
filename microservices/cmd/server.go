@@ -8,38 +8,44 @@ import (
 	"time"
 
 	"github.com/segmentio/kafka-go"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type Server struct {
+type ServerConf struct {
 	Port        int
-	Log         *slog.Logger
 	KafkaWriter *kafka.Writer
-
-	mux *http.ServeMux
+	MongoClient *mongo.Client
 }
 
-func NewServer(port int, kafkaWriter *kafka.Writer) *Server {
+type Server struct {
+	Log  *slog.Logger
+	conf ServerConf
+	mux  *http.ServeMux
+}
+
+func NewServer(serverConf ServerConf) *Server {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("POST /api/create-post", CreatePostHandler)
+	mux.HandleFunc("POST /api/create-post-without-kafka", CreatePostHandlerWithoutKafka)
+	mux.HandleFunc("POST /api/create-post-with-kafka", CreatePostHandlerWithKafka)
 
 	return &Server{
-		mux:         mux,
-		KafkaWriter: kafkaWriter,
-		Port:        port,
-		Log:         slog.Default(),
+		mux:  mux,
+		conf: serverConf,
+		Log:  slog.Default(),
 	}
 }
 
 func (s *Server) Start() {
-	s.Log.Info("server is up and running on", slog.Int("Port", s.Port))
-	panic(http.ListenAndServe(fmt.Sprintf(":%d", s.Port), s.AddKafkaWriterContext(s.LogMiddleware(s.mux))))
+	s.Log.Info("server is up and running on", slog.Int("Port", s.conf.Port))
+	panic(http.ListenAndServe(fmt.Sprintf(":%d", s.conf.Port), s.AddCustomContexts(s.LogMiddleware(s.mux))))
 }
 
-// AddKafkaWriterContext adds the Kafka writer to the request context
-func (s *Server) AddKafkaWriterContext(next http.Handler) http.Handler {
+// AddCustomContexts adds the Kafka writer to the request context
+func (s *Server) AddCustomContexts(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := context.WithValue(r.Context(), "kafkaWriter", s.KafkaWriter)
+		ctx := context.WithValue(r.Context(), "kafkaWriter", s.conf.KafkaWriter)
+		ctx = context.WithValue(ctx, "mongoClient", s.conf.MongoClient)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
