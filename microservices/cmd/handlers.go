@@ -98,7 +98,7 @@ func CreatePostHandlerWithKafka(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Publish msg to kafka
+	// // Publish msg to kafka
 	err = kafkaWriter.WriteMessages(r.Context(), kmsg)
 	if err != nil {
 		ApiJsonResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -106,7 +106,8 @@ func CreatePostHandlerWithKafka(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ApiJsonResponse(w, http.StatusOK, map[string]string{
-		"message":   "post created",
+		"message": "post created",
+		// "post":    string(postBytes),
 	})
 }
 

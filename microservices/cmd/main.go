@@ -20,7 +20,7 @@ func main() {
 		Port: 3000,
 		KafkaWriter: kafkaa.NewKafkaWriterClient(kafka.WriterConfig{
 			Topic:    "create-posts",
-			Brokers:  []string{"localhost:9092"},
+			Brokers:  []string{"localhost:9092", "localhost:29092"},
 			Balancer: &kafka.Hash{},
 			Dialer: &kafka.Dialer{
 				Timeout:   10 * time.Second,

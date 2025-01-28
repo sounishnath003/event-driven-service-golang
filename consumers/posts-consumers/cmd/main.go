@@ -27,10 +27,10 @@ func main() {
 	// init the kafka reader streamer
 	kafkaReader := kafkaa.NewKafkaReaderClient(kafka.ReaderConfig{
 		Topic:   "create-posts",
-		Brokers: []string{"localhost:9092"},
+		Brokers: []string{"localhost:9092", "localhost:29092"},
 		GroupID: "posts-consumer-group",
 		Dialer: &kafka.Dialer{
-			Timeout:   10 * time.Second,
+			Timeout:   5 * time.Second,
 			DualStack: true,
 		},
 	})
@@ -51,7 +51,6 @@ func main() {
 
 	// Keep the main function running
 	select {}
-
 }
 
 // consumeMessages reads messages from Kafka and saves them to MongoDB in batches
@@ -67,13 +66,15 @@ func consumeMessages(reader *kafka.Reader, mongoClient *mongo.Client) {
 		select {
 		case <-ticker.C:
 			if len(posts) > 0 {
+				log.Printf("Batch interval reached. Saving %d posts to database.", len(posts))
 				if err := SavePostsBulkToDatabse(mongoClient, posts); err != nil {
 					log.Printf("Failed to save posts to database: %v", err)
+				} else {
+					log.Printf("Successfully saved %d posts to database.", len(posts))
 				}
-				log.Printf("total %d posts has been saved\n", len(posts))
 				posts = nil // Reset the batch
 			} else {
-				log.Println("no posts content to process")
+				log.Println("Batch interval reached but no posts to process.")
 			}
 		default:
 			m, err := reader.ReadMessage(context.Background())
@@ -96,10 +97,12 @@ func consumeMessages(reader *kafka.Reader, mongoClient *mongo.Client) {
 
 			posts = append(posts, post)
 			if len(posts) >= batchSize {
+				log.Printf("Batch size reached. Saving %d posts to database.", len(posts))
 				if err := SavePostsBulkToDatabse(mongoClient, posts); err != nil {
 					log.Printf("Failed to save posts to database: %v", err)
+				} else {
+					log.Printf("Successfully saved %d posts to database.", len(posts))
 				}
-				log.Printf("total %d posts has been saved\n", len(posts))
 				posts = nil // Reset the batch
 			}
 		}
