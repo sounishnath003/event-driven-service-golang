@@ -27,8 +27,7 @@ func main() {
 	// init the kafka reader streamer
 	kafkaReader := kafkaa.NewKafkaReaderClient(kafka.ReaderConfig{
 		Topic:   "create-posts",
-		Brokers: []string{"localhost:9092", "localhost:29092"},
-		GroupID: "posts-consumer-group",
+		Brokers: []string{"localhost:9092"},
 		Dialer: &kafka.Dialer{
 			Timeout:   5 * time.Second,
 			DualStack: true,

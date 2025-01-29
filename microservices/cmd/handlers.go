@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -72,16 +74,8 @@ func savePostToDatabase(mongoClient *mongo.Client, createPostPayload Post) error
 
 // CreatePostHandlerWithKafka handles the create posts requests publishes without kafka
 func CreatePostHandlerWithKafka(w http.ResponseWriter, r *http.Request) {
-	var createPostPayload Post
-	err := json.NewDecoder(r.Body).Decode(&createPostPayload)
-
-	if err != nil {
-		ApiJsonResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		return
-	}
-
 	// postBytes
-	postBytes, err := json.Marshal(createPostPayload)
+	postBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		ApiJsonResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -98,11 +92,10 @@ func CreatePostHandlerWithKafka(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// // Publish msg to kafka
+	// Publish message to Kafka
 	err = kafkaWriter.WriteMessages(r.Context(), kmsg)
 	if err != nil {
-		ApiJsonResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		return
+		log.Printf("Failed to publish message to Kafka: %v", err)
 	}
 
 	ApiJsonResponse(w, http.StatusOK, map[string]string{
