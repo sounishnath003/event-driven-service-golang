@@ -5,9 +5,6 @@ services:
       - 2181:2181
     environment:
       ZOO_LOG4J_PROP: "INFO,ROLLINGFILE"
-    volumes:
-      - zookeeper-data:/data
-      - zookeeper-datalog:/datalog
 
   kafka:
     image: apache/kafka:latest
@@ -33,8 +30,6 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
-    # volumes:
-    #   - kafka-data:/var/lib/kafka/data
 
   mongo:
     image: mongo
@@ -46,8 +41,6 @@ services:
       - 27017:27017
     expose:
       - 27017
-    volumes:
-      - mongo-db:/data/db
 
   mongo-express:
     image: mongo-express

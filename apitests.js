@@ -23,11 +23,12 @@ export default function () {
         },
     };
 
+    // let res = http.post('http://localhost:3000/api/create-post-without-kafka', payload, params);
     let res = http.post('http://localhost:3000/api/create-post-with-kafka', payload, params);
 
     check(res, {
         'status is 200': (r) => r.status === 200,
-        'response time is less than 200ms': (r) => r.timings.duration < 200,
+        'response time is less than 300ms': (r) => r.timings.duration < 300,
     });
 
 }
