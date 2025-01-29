@@ -1,0 +1,17 @@
+cloud-architecture-diagram
+
+title Event-Driven Service with Kafka and MongoDB
+
+users-100VU [icon: users]
+microservices [icon: api, color: red] {
+    create-post-without-kafka [icon: golang]
+    create-post-with-kafka [icon: golang]
+}
+kafka [icon: kafka, color: blue]
+mongodb [icon: mongodb, color: green]
+
+
+users-100VU > microservices
+create-post-without-kafka > mongodb :direct writes to db, 7783 requests per second
+create-post-with-kafka > kafka :produces to a kafka streaming 13560 requests per second
+kafka > mongodb :consumers streams into mongo
