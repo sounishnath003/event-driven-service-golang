@@ -2,6 +2,8 @@
 
 > Optimize POST API in Backend Using Kafka
 
+![gif](assets/event-driven-system-youtube-thumbnai.gif)
+
 This project demonstrates an event-driven architecture using Kafka and MongoDB. The service handles high-volume API requests by leveraging Kafka for message queuing and MongoDB for data storage.
 
 ## High level architecture
